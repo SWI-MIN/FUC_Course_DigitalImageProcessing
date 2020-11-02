@@ -30,7 +30,7 @@ def gray():
     img_filepath = os.path.splitext(img_path)[0]    # 拆分路徑 & 副檔名，0 為路徑
     img_fileextension = os.path.splitext(img_path)[1]  # 1 為副檔名
     img_filename = os.path.basename(img_filepath)     # 取出檔名不含副檔名
-
+    
     img = cv2.imread(img_filename+img_fileextension,cv2.IMREAD_GRAYSCALE)
     histogram_ = histogram(img)
     cdf_value = equalize(img,histogram_)
