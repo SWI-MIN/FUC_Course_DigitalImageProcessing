@@ -5,13 +5,11 @@ from matplotlib import pyplot as plt
 def rgb2hsv(img):
     r,g,b = cv2.split(img)      # 分離RGB
     r, g, b = r/255.0, g/255.0, b/255.0
-    h = img.shape[0]    # 高(直行)
-    w = img.shape[1]    # 寬(橫列)
-    # HSV 分別承接經過公式轉換後的H,S,V值
-    H, S, V = np.zeros((h, w), np.float32),  np.zeros((h, w), np.float32),  np.zeros((h, w), np.float32)
-    
-    for i in range(0, h):
-        for j in range(0, w):
+    # HSV 分別承接經過公式轉換後的H,S,V值    # 高(直行)img.shape[0]     # 寬(橫列)img.shape[1]   # \ 多行語句
+    H, S, V = np.zeros((img.shape[0], img.shape[1]), np.float32), \
+        np.zeros((img.shape[0], img.shape[1]), np.float32),  np.zeros((img.shape[0], img.shape[1]), np.float32)
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
             max_ = max((b[i, j], g[i, j], r[i, j]))
             min_ = min((b[i, j], g[i, j], r[i, j]))
             # H
@@ -36,15 +34,17 @@ def rgb2hsv(img):
             # V
             V[i, j] =int( max_*255)
     # 合併輸出
-    HSV = cv2.merge([H,S,V])
-    HSV=np.array(HSV,dtype='uint8')
-    return HSV
+    # HSV = cv2.merge([H,S,V])
+    # HSV=np.array(HSV,dtype='uint8')
+    # return HSV
     # 不合併輸出
-    # return H, S, V
+    return H, S, V
 
 
 img = cv2.imread('maya.jpg',-1)  # 讀檔
-img_rgb2hsv = rgb2hsv(img)
+h, s, v  = rgb2hsv(img)
+hsv = cv2.merge([h, s, v])      # 合併HSV
+img_rgb2hsv=np.array(hsv,dtype='uint8')
 
 img_COLOR_RGB2HSV = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
 

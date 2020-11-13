@@ -104,25 +104,8 @@ def rgb_2_bi():
 hsv_2_bi()
 rgb_2_bi()
 
-
 # RGB 範圍 190 138 117    250 205 179
 #          17  38.4 74.5  22 28.4 98
-# img = cv2.imread('maya.jpg',-1)  # 讀檔
-
-# h, s, v  = rgb2hsv(img)
-# hsv = cv2.merge([h, s, v])      # 合併HSV
-# img_rgb2hsv=np.array(hsv,dtype='uint8')
-
-
-# kernel = np.ones((5,5),np.uint8)
-# opening = cv2.morphologyEx(img_rgb2hsv, cv2.MORPH_OPEN, kernel)  # 斷開，先侵蝕 後擴張，去除圖像中的小亮點
-# closing = cv2.morphologyEx(img_rgb2hsv, cv2.MORPH_CLOSE, kernel)  # 閉合，先擴張 後侵蝕，去除圖像中的小黑點
-
-# cv2.imshow('img_00',opening)
-# cv2.imshow('img_01',closing)
-
-# cv2.waitKey()
-
 
 # 色彩範圍
 # https://blog.csdn.net/wanggsx918/article/details/23272669
