@@ -2,7 +2,7 @@ import os
 import cv2 as cv2
 import numpy as np
 from matplotlib import pyplot as plt
-def rgb2hsv(img):
+def rgb2hsv(img):       # 轉換成hsv, input參數 = RGB圖像, output = H,S,V 
     r,g,b = cv2.split(img)      # 分離RGB
     r, g, b = r/255.0, g/255.0, b/255.0
     # HSV 分別承接經過公式轉換後的H,S,V值    # 高(直行)img.shape[0]     # 寬(橫列)img.shape[1]   # \ 多行語句
@@ -41,15 +41,12 @@ def rgb2hsv(img):
     # 不合併輸出
     return H, S, V
 
-def hsv_2_bi():
-    img_path='E:/Program_File/PYTHON/數位影像處理作業/HW_2/hand7.jpg'
-    img_filepath = os.path.splitext(img_path)[0]    # 拆分路徑 & 副檔名，0 為路徑
-    img_fileextension = os.path.splitext(img_path)[1]  # 1 為副檔名
-    img_filename = os.path.basename(img_filepath)     # 取出檔名不含副檔名
-    img = cv2.imread(img_filename + img_fileextension,-1)  # 讀檔
+def merge_hsv(h, s, v):  # 合併HSV, input參數 = H,S,V, output =  HSV圖像
+    hsv = cv2.merge([h, s, v])      # 合併HSV
+    hsv=np.array(hsv,dtype='uint8')
+    return hsv
 
-
-    h, s, v  = rgb2hsv(img)
+def hsv_2_bi(h, s, v):      # HSV 圖像轉換為黑白影像, input = h, s, v, output = 黑白影像
     bi_img_hav = np.zeros((img.shape[0], img.shape[1]), np.uint8)
     for i in range(img.shape[0]):
         for j in range(img.shape[1]):
@@ -59,25 +56,10 @@ def hsv_2_bi():
                 bi_img_hav[i, j] = 255
             else:
                 bi_img_hav[i, j] = 0
-
-    hsv = cv2.merge([h, s, v])      # 合併HSV
-    hsv=np.array(hsv,dtype='uint8')
-    cv2.imshow('img_00',hsv)        # HSV SHOW
     bi_img_hav = np.array(bi_img_hav,dtype='uint8')
-    cv2.imshow('img_01',bi_img_hav)
+    return bi_img_hav
 
-    cv2.imwrite(img_filename+'_hsv'+img_fileextension,hsv)# 寫檔
-    cv2.imwrite(img_filename+'hand5_hsv_bi'+img_fileextension,bi_img_hav)# 寫檔
-
-    cv2.waitKey()
-
-def rgb_2_bi():
-    img_path='E:/Program_File/PYTHON/數位影像處理作業/HW_2/hand7.jpg'
-    img_filepath = os.path.splitext(img_path)[0]    # 拆分路徑 & 副檔名，0 為路徑
-    img_fileextension = os.path.splitext(img_path)[1]  # 1 為副檔名
-    img_filename = os.path.basename(img_filepath)     # 取出檔名不含副檔名
-    img = cv2.imread(img_filename + img_fileextension,-1)  # 讀檔
-
+def rgb_2_bi(img):      # RGB 圖像轉換為黑白影像, input = 圖像, output = 黑白影像
     b,g,r = cv2.split(img)      # 分離RGB
     bi_img_rgb = np.zeros((img.shape[0], img.shape[1]), np.uint8)
     for i in range(img.shape[0]):
@@ -89,42 +71,44 @@ def rgb_2_bi():
             else:
                 bi_img_rgb[i, j] = 0
 
-    rgb = cv2.merge([r, g, b])      # bgr 改用 rgb 存
-    rgb=np.array(rgb,dtype='uint8')
-    cv2.imshow('img_02',rgb)        # rgb SHOW
+    # rgb = cv2.merge([r, g, b])      # bgr 改用 rgb 存
+    # rgb=np.array(rgb,dtype='uint8')
     bi_img_rgb = np.array(bi_img_rgb,dtype='uint8')
-    cv2.imshow('img_03',bi_img_rgb)
+    return bi_img_rgb
 
-    cv2.imwrite(img_filename+'_rgb'+img_fileextension,rgb)# 寫檔
-    cv2.imwrite(img_filename+'hand5_bgr2rgb_bi'+img_fileextension,bi_img_rgb)# 寫檔
+def read_img(path):     # 讀檔, input = 影像路徑, output = 圖像,檔名,副檔名
+    img_path = path
+    img_filepath = os.path.splitext(img_path)[0]    # 拆分路徑 & 副檔名，0 為路徑
+    img_fileextension = os.path.splitext(img_path)[1]  # 1 為副檔名
+    img_filename = os.path.basename(img_filepath)     # 取出檔名不含副檔名
+    img = cv2.imread(img_filename + img_fileextension,-1)  # 讀檔
+    return img, img_filename, img_fileextension
 
-    cv2.waitKey()  
 
+img, file_name, file_extension = read_img('E:/Program_File/PYTHON/數位影像處理作業/HW_2/hand6.jpg')
+h, s, v = rgb2hsv(img)
+hsv = merge_hsv(h, s, v)
+bi_hsv = hsv_2_bi(h, s, v)
+bi_rgb = rgb_2_bi(img)
 
-hsv_2_bi()
-rgb_2_bi()
+cv2.imshow('img_RGB', img)
+cv2.imshow('img_HSV', hsv)
+cv2.imshow('img_bi_hsv', bi_hsv)
+cv2.imshow('img_bi_rgb', bi_rgb)
+cv2.imwrite(file_name + '_hsv' + file_extension,hsv)# 寫檔
+cv2.imwrite(file_name + '_bi_hsv' + file_extension,bi_hsv)# 寫檔
+cv2.imwrite(file_name + '_bi_rgb' + file_extension,bi_rgb)# 寫檔
+
+cv2.waitKey()  
 
 
 # RGB 範圍 190 138 117    250 205 179
 #          17  38.4 74.5  22 28.4 98
-# img = cv2.imread('maya.jpg',-1)  # 讀檔
-
-# h, s, v  = rgb2hsv(img)
-# hsv = cv2.merge([h, s, v])      # 合併HSV
-# img_rgb2hsv=np.array(hsv,dtype='uint8')
-
-
-# kernel = np.ones((5,5),np.uint8)
-# opening = cv2.morphologyEx(img_rgb2hsv, cv2.MORPH_OPEN, kernel)  # 斷開，先侵蝕 後擴張，去除圖像中的小亮點
-# closing = cv2.morphologyEx(img_rgb2hsv, cv2.MORPH_CLOSE, kernel)  # 閉合，先擴張 後侵蝕，去除圖像中的小黑點
-
-# cv2.imshow('img_00',opening)
-# cv2.imshow('img_01',closing)
-
-# cv2.waitKey()
-
 
 # 色彩範圍
 # https://blog.csdn.net/wanggsx918/article/details/23272669
 # 手勢識別（一）：獲取圖像並進行膚色檢測（Python）
 # https://www.twblogs.net/a/5ca72320bd9eee5b1a07541d
+
+# UE製作PBR材質攻略Part 1 - 色彩知識
+# https://www.itread01.com/content/1570932365.html

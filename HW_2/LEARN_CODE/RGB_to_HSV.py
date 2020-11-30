@@ -59,4 +59,5 @@ cv2.waitKey()
 # python实现RGB转换HSV : https://blog.csdn.net/weixin_43360384/article/details/84871521
 # RGB转到HSV和HSL公式 : https://blog.csdn.net/Sunshine_in_Moon/article/details/45131285
 # 由RGB到HSV的转换详解 : https://zhuanlan.zhihu.com/p/105886300
-
+# UE製作PBR材質攻略Part 1 - 色彩知識
+# https://www.itread01.com/content/1570932365.html
