@@ -30,20 +30,22 @@ def SobelFilter(img):
         for j in range(1, size[1] - 1):
             G_x[i, j] = np.sum(np.multiply(img[i - 1 : i + 2, j - 1 : j + 2], kernel_x))  # 矩陣相乘相加存回中心點
             G_y[i, j] = np.sum(np.multiply(img[i - 1 : i + 2, j - 1 : j + 2], kernel_y))  # python 含前不含後所以加2
+    angles = np.rad2deg(np.arctan2(G_y, G_x))  # 梯度方向 = atan(y/x)(簡報P54)，因為np.arctan2回傳的是弧度，因此要將弧度轉化為角度
+    angles[angles < 0] += 180   # arctangent定義域[-pi/2,pi/2]
+
     # 平方開根號與取絕對值效果差不多，為求運算效率，有時會用絕對值取得近似值
     # gradient = abs(G_x) + abs(G_y) 
     gradient = np.sqrt(np.square(G_x) + np.square(G_y))
     # 不知道這步驟要幹嘛的，不做這步驟會變得有很多多餘的線條，看起來這步驟像是將原先陣列乘上
     gradient = np.multiply(gradient, 255.0 / gradient.max())  
-
-    angles = np.rad2deg(np.arctan2(G_y, G_x))  # 梯度方向 = atan(y/x)(簡報P54)，因為np.arctan2回傳的是弧度，因此要將弧度轉化為角度
-    angles[angles < 0] += 180   # arctangent定義域[-pi/2,pi/2]
     gradient = gradient.astype('uint8')  # 將scale轉換成8-bit(簡報P55)
+    
     return gradient, angles  # 回傳梯度以及角度
+            
 
 def non_maximum_suppression(img, angles):  # 非最大值響應，用以去除假的邊緣響應
     size = img.shape
-    suppressed = np.zeros(size)
+    suppressed = np.zeros(size, dtype = 'uint8')
     for i in range(1, size[0] - 1):
         for j in range(1, size[1] - 1):
             # 依梯度方向(法向量方向):水平、垂直、+-45度
@@ -59,60 +61,37 @@ def non_maximum_suppression(img, angles):  # 非最大值響應，用以去除�
             # 此處則為若該處為最大值，才將其填入新圖中
             if img[i, j] >= compare_value:
                 suppressed[i, j] = img[i, j]
-    suppressed = np.multiply(suppressed, 255.0 / suppressed.max())# 不知道這步驟要幹嘛的
+    # suppressed = np.multiply(suppressed, 255.0 / suppressed.max())# 不知道這步驟要幹嘛的，有沒有他好像沒差
     return suppressed
 
 # 雙門檻值，大於high為強像素，小於low為弱像素，介於兩者之間其周圍4連通或8連通若有強項素其為邊緣
-def double(img, low, high):  
-    double_threshold = np.zeros(img.shape)
+def double_threshold_hysteresis(img, low, high):  
+    double_threshold = np.zeros(img.shape, dtype = 'uint8')
     size = img.shape
     for i in range(1, size[0] - 1):
         for j in range(1, size[1] - 1):
             if(img[i, j] > high):
-                double_threshold[i, j] = 1
+                double_threshold[i, j] = 255
             elif(img[i, j] <= high and img[i, j] >= low):
                 if(np.max(img[i - 1 : i + 2, j - 1 : j + 2]) >= high):
-                    double_threshold[i, j] = 0
+                    double_threshold[i, j] = 255
                 else:
                     double_threshold[i, j] = 0
             else:
                 double_threshold[i, j] = 0
     return double_threshold
 
-def double_threshold_hysteresis(img, low, high):  
-    weak = 50
-    strong = 255
-    size = img.shape
-    result = np.zeros(size)
-    weak_x, weak_y = np.where((img > low) & (img <= high))  # np.where滿足條件輸出X，不滿足輸出Y
-    strong_x, strong_y = np.where(img >= high)
-    result[strong_x, strong_y] = strong
-    result[weak_x, weak_y] = weak
-    dx = np.array((-1, -1, 0, 1, 1, 1, 0, -1))
-    dy = np.array((0, 1, 1, 1, 0, -1, -1, -1))
-    
-    while len(strong_x):
-        x = strong_x[0]
-        y = strong_y[0]
-        strong_x = np.delete(strong_x, 0)
-        strong_y = np.delete(strong_y, 0)
-        for direction in range(len(dx)):
-            new_x = x + dx[direction]
-            new_y = y + dy[direction]
-            if((new_x >= 0 & new_x < size[0] & new_y >= 0 & new_y < size[1]) and (result[new_x, new_y]  == weak)):
-                result[new_x, new_y] = strong
-                np.append(strong_x, new_x)
-                np.append(strong_y, new_y)
-    result[result != strong] = 0
-    return result
-
-
 def Canny(img, low, high):
     img, angles = SobelFilter(img)
-    cv2.imshow('test_edgestest_edges', img)
+    # cv2.imshow('SobelFilter', img)
+    # cv2.imwrite('./Test_Img/' + file_name + '_SobelFilter.jpg',img)
     gradient = np.copy(img)
     img = non_maximum_suppression(img, angles)
-    # img = double_threshold_hysteresis(img, low, high)
+    # cv2.imshow('non_maximum_suppression', img)
+    # cv2.imwrite('./Test_Img/' + file_name + '_non_maximum_suppression.jpg',img)
+    img = double_threshold_hysteresis(img, low, high)
+    cv2.imshow('double_threshold_hysteresis', img)
+    # cv2.imwrite('./Test_Img/' + file_name + '_double_threshold_hysteresis.jpg',img)
     return img, gradient
 
 
@@ -120,15 +99,8 @@ def Canny(img, low, high):
 img, file_name, file_extension = read_img('E:/Program_File/PYTHON/數位影像處理作業/HW_3/Test_Img/03.jpg')
 edges, gradient = Canny(img, 10, 30)
 
-test_edges = double(edges, 10, 30)
-cv2.imshow('test_edges', test_edges)
-# cv2.imwrite('./Test_Img/' + file_name + '_canny_test_test_edges.jpg',edges)
-
-
-
-
-cv2.imshow('Canny', edges)
-# cv2.imwrite('./Test_Img/' + file_name + '_canny_test_.jpg',edges)
+# cv2.imshow('Canny', edges)
+# cv2.imwrite('./Test_Img/' + file_name + '_canny.jpg',edges)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
@@ -139,3 +111,5 @@ cv2.destroyAllWindows()
 
 # Edge-detection---Canny-detector
 # https://github.com/StefanPitur/Edge-detection---Canny-detector/blob/master/canny.py
+# CANNY EDGE DETECTION
+# http://justin-liang.com/tutorials/canny/
