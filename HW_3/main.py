@@ -83,7 +83,7 @@ def Canny(img, low, high):
     img = double_threshold_hysteresis(img, low, high)
     # cv2.imshow('double_threshold_hysteresis', img)
     # cv2.imwrite('./Test_Img/' + file_name + '_double_threshold_hysteresis.jpg',img)
-    return img, gradientc
+    return img, gradient
 
 def HoughLinesP(canny):  # 定義Hough轉換參數
     HoughLinesP = canny.copy()
