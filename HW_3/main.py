@@ -28,8 +28,7 @@ def SobelFilter(img):
     # 平方開根號與取絕對值效果差不多，為求運算效率，有時會用絕對值取得近似值
     # gradient = abs(G_x) + abs(G_y) 
     gradient = np.sqrt(np.square(G_x) + np.square(G_y))
-    # 不知道這步驟要幹嘛的，不做這步驟會變得有很多多餘的線條，看起來這步驟像是將原先陣列乘上
-    gradient = np.multiply(gradient, 255.0 / gradient.max())  
+    gradient = np.multiply(gradient, 255.0 / gradient.max())      # 255.0 / gradient.max()將gradient轉成0-1，在乘回gradient就會變成0-255
     gradient = gradient.astype('uint8')  # 將scale轉換成8-bit(簡報P55)
     
     return gradient, angles  # 回傳梯度以及角度
@@ -52,7 +51,6 @@ def non_maximum_suppression(img, angles):  # 非最大值響應，用以去除�
             # 此處則為若該處為最大值，才將其填入新圖中
             if img[i, j] >= compare_value:
                 suppressed[i, j] = img[i, j]
-    # suppressed = np.multiply(suppressed, 255.0 / suppressed.max())# 不知道這步驟要幹嘛的，有沒有他好像沒差
     return suppressed
 
 # 雙門檻值，大於high為強像素，小於low為弱像素，介於兩者之間其周圍4連通或8連通若有強項素其為邊緣
@@ -117,9 +115,9 @@ HoughLinesP = HoughLinesP(canny)
 
 
 # 讀檔  目前只能用png疊png，不能png疊jpg     
-img_myself, file_name_myself, file_extension_myself = read_img('E:/Program_File/PYTHON/數位影像處理作業/HW_3/Test_Img/selfie.png')
-img_signature, file_name_signature, file_extension_signature = read_img('E:/Program_File/PYTHON/數位影像處理作業/HW_3/Test_Img/SWIMIN.png')
-signature = combine_different_size_images(img_signature, img_myself, 350, 50)  # 呼叫上面def的副函式，第一個參數是前景，第二個為背景，第三四個為開始位置 Y*X (Y:直的，X:橫的)
+# img_myself, file_name_myself, file_extension_myself = read_img('E:/Program_File/PYTHON/數位影像處理作業/HW_3/Test_Img/selfie.png')
+# img_signature, file_name_signature, file_extension_signature = read_img('E:/Program_File/PYTHON/數位影像處理作業/HW_3/Test_Img/SWIMIN.png')
+# signature = combine_different_size_images(img_signature, img_myself, 350, 50)  # 呼叫上面def的副函式，第一個參數是前景，第二個為背景，第三四個為開始位置 Y*X (Y:直的，X:橫的)
 
 
 
@@ -127,10 +125,10 @@ signature = combine_different_size_images(img_signature, img_myself, 350, 50)  #
 
 
 cv2.imshow('Canny', canny)
-# cv2.imwrite('./Test_Img/' + file_name + '_canny.jpg',background)
-cv2.imshow('HoughLinesP', HoughLinesP)
-# cv2.imwrite('./Test_Img/' + file_name + '_HoughLinesP.jpg',background)
-cv2.imshow('composited image', signature)
+# cv2.imwrite('./Test_Img/' + file_name + '_canny.jpg',canny)
+# cv2.imshow('HoughLinesP', HoughLinesP)
+# cv2.imwrite('./Test_Img/' + file_name + '_HoughLinesP.jpg',HoughLinesP)
+# cv2.imshow('composited image', signature)
 # cv2.imwrite('./Test_Img/' + file_name_myself + '_signature.jpg',background)
 
 cv2.waitKey(0)

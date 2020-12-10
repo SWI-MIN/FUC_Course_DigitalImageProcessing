@@ -22,7 +22,7 @@ kernel_size = 3
 blur_img_gray = cv2.GaussianBlur(img_gray,(kernel_size, kernel_size), 0)
 
 # 定義Canny的參數並應用
-edges = cv2.Canny(blur_img_gray, threshold1=50, threshold2=200, apertureSize=3)
+edges = cv2.Canny(blur_img_gray, threshold1=50, threshold2=150, apertureSize=3)
 
 edges_HoughLinesP = edges.copy()
 # 定義Hough轉換參數
@@ -33,7 +33,7 @@ for line in [l[0] for l in lines]:  # 畫線
 
 cv2.imshow('Canny', edges)
 # cv2.imwrite('./Test_Img/' + file_name + '_canny_function.jpg',edges)
-cv2.imshow('Result', edges_HoughLinesP)
+# cv2.imshow('Result', edges_HoughLinesP)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
