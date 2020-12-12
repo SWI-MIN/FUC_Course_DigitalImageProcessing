@@ -1,6 +1,9 @@
 import cv2
 import os
 import numpy as np
+import warnings
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 def read_img(img_path):     # 讀檔, input = 影像路徑, output = 圖像,檔名,副檔名
     img_filepath = os.path.splitext(img_path)[0]    # 拆分路徑 & 副檔名，0 為路徑
@@ -62,49 +65,67 @@ def non_maximum_suppression(img, angles):  # 非最大值響應，用以去除�
                 suppressed[i, j] = img[i, j]
     return suppressed
 
-# 雙門檻值，大於high為強像素，小於low為弱像素，介於兩者之間其周圍4連通或8連通若有強項素其為邊緣
-def double_threshold_hysteresis(img, low, high):  
-    double_threshold = np.zeros(img.shape, dtype = 'uint8')
-    size = img.shape
-    weak = 100
-    strong = 255
-    weak_x, weak_y = np.where((img > low) & (img <= high))
-    strong_x, strong_y = np.where(img >= high)
-    double_threshold[strong_x, strong_y] = strong
-    double_threshold[weak_x, weak_y] = weak
-    # 不知道怎麼做，最好的方法應該是從強像素向外，如過世若像素將其轉為強像素
-    while(double_threshold.__contains__(100) == True):
-        for i in range(1, size[0] - 1):
-            for j in range(1, size[1] - 1):
-                if (double_threshold[i,j] == strong):
-                    if(double_threshold[i-1,j-1] == weak):
-                        double_threshold[i - 1 : i + 2, j - 1 : j + 2] == strong
-                    elif(double_threshold[i-1,j-1] == weak):
-                        double_threshold[i - 1 : i + 2, j - 1 : j + 2] == strong
+# def combine(img,c):
+#     i,j = c
+#     # dx、dy 分別是周圍8個點的位置
+#     dx = [-1,-1,-1,0,0,1,1,1]
+#     dy = [-1,0,1,-1,1,-1,0,1]
 
-                    # if (np.max(double_threshold[i - 1 : i + 2, j - 1 : j + 2]) == weak):
-                    #     double_threshold[i, j] = strong
-                    # else:
-                    #     continue
-                
-
-    return double_threshold
-# # 雙門檻值，大於high為強像素，小於low為弱像素，介於兩者之間其周圍4連通或8連通若有強項素其為邊緣
-# def double_threshold_hysteresis(img, low, high):  
-#     double_threshold = np.zeros(img.shape, dtype = 'uint8')
+#     for x,y in zip(dx,dy):
+#         if img[i + x,j + y] == 1:
+#             # 如果有弱像素存在把那個點設成強像素、再移動到那個點、用遞廻不斷查看下一個點
+#             img[i + x,j + y] = 2
+#             combine(img,(i + x,j + y))
+# def double_threshold_hysteresis(img,low,high):
 #     size = img.shape
+#     # 加果是強像素設成2、弱像素設1、其他設0
 #     for i in range(1, size[0] - 1):
 #         for j in range(1, size[1] - 1):
-#             if(img[i, j] >= high):
-#                 double_threshold[i, j] = 255
-#             elif(img[i, j] < high and img[i, j] >= low):
-#                 if(np.max(img[i - 1 : i + 2, j - 1 : j + 2]) >= high):
-#                     double_threshold[i, j] = 255
-#                 else:
-#                     double_threshold[i, j] = 0
+#             if img[i,j] >= high:
+#                 img[i,j] = 2
+#             elif high > img[i,j] >= low:
+#                 img[i,j] = 1
 #             else:
-#                 double_threshold[i, j] = 0
-#     return double_threshold
+#                 img[i,j] = 0
+
+#     for i in range(1,size[0] - 1):
+#         for j in range(1,size[1] - 1):
+#             if img[i,j] == 2:
+#                 # 確認強像素周圍的點
+#                 combine(img,(i,j))
+    
+#     img = np.where(img == 2,255,0)
+#     return np.uint8(img)
+    
+def recursion(img, c):  
+    i,j = c    
+    # dx、dy 分別是周圍8個點的位置
+    dx = [-1,-1,-1,0,0,1,1,1]
+    dy = [-1,0,1,-1,1,-1,0,1]
+
+    for x,y in zip(dx,dy):
+        if img[i + x,j + y] == 1:
+            # 如果有弱像素存在把那個點設成強像素、再移動到那個點、用遞廻不斷查看下一個點
+            img[i + x,j + y] = 2
+            recursion(img,(i + x,j + y))
+# 雙門檻值，大於high為強像素，小於low為弱像素，介於兩者之間其周圍4連通或8連通若有強項素其為邊緣
+def double_threshold_hysteresis(img, low, high):  
+    size = img.shape
+    low_x, low_y = np.where((img < low))
+    img[low_x, low_y] = 0
+    weak_x, weak_y = np.where((img >= low) & (img < high))
+    img[weak_x, weak_y] = 1
+    strong_x, strong_y = np.where(img >= high)
+    img[strong_x, strong_y] = 2
+    # 不知道怎麼做，最好的方法應該是從強像素向外，如過世若像素將其轉為強像素
+    
+    for i in range(1, size[0] - 1):
+        for j in range(1, size[1] - 1):
+            if img[i,j] == 2:
+                recursion(img, (i, j))
+    img = np.where(img == 2,255,0)
+    return np.uint8(img)
+
 
 
 def Canny(img, low, high):
@@ -131,11 +152,7 @@ cv2.waitKey(0)
 cv2.destroyAllWindows()
 
 
-# qwe = np.array([[1,2,3,4,5],[1,2,3,4,5],[1,2,3,4,5],[1,2,3,4,5],[1,2,3,4,5]])
-# print(type(qwe))
 
-# print(qwe[0:1,0:1,:].__contains__(4))
-# print(qwe.__contains__(9))
 
 # Edge-detection---Canny-detector
 # https://github.com/StefanPitur/Edge-detection---Canny-detector/blob/master/canny.py

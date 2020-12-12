@@ -6,8 +6,7 @@ def read_img(img_path):     # 讀檔, input = 影像路徑, output = 圖像,檔�
     img_filepath = os.path.splitext(img_path)[0]    # 拆分路徑 & 副檔名，0 為路徑
     img_fileextension = os.path.splitext(img_path)[1]  # 1 為副檔名
     img_filename = os.path.basename(img_filepath)     # 取出檔名不含副檔名
-    # img = cv2.imread(img_path, -1)  # 讀檔(中文路徑會爆掉)
-    img = cv2.imdecode(np.fromfile(img_path,dtype=np.uint8),-1) # 讀檔(含有中文路徑)
+    img = cv2.imread(img_path)  # 讀檔(中文路徑會爆掉)
     return img, img_filename, img_fileextension
 
 def SobelFilter(img):
@@ -23,64 +22,68 @@ def SobelFilter(img):
             G_x[i, j] = np.sum(np.multiply(img[i - 1 : i + 2, j - 1 : j + 2], kernel_x))  # 矩陣相乘相加存回中心點
             G_y[i, j] = np.sum(np.multiply(img[i - 1 : i + 2, j - 1 : j + 2], kernel_y))  # python 含前不含後所以加2
     angles = np.rad2deg(np.arctan2(G_y, G_x))  # 梯度方向 = atan(y/x)(簡報P54)，因為np.arctan2回傳的是弧度，因此要將弧度轉化為角度
-    angles[angles < 0] += 180   # arctangent定義域[-pi/2,pi/2]
+    angles[angles < 0] += 180   # arctangent定義域[-pi/2,pi/2]    
+    gradient = abs(G_x) + abs(G_y) 
 
-    # 平方開根號與取絕對值效果差不多，為求運算效率，有時會用絕對值取得近似值
-    # gradient = abs(G_x) + abs(G_y) 
-    gradient = np.sqrt(np.square(G_x) + np.square(G_y))
-    gradient = np.multiply(gradient, 255.0 / gradient.max())      # 255.0 / gradient.max()將gradient轉成0-1，在乘回gradient就會變成0-255
-    gradient = gradient.astype('uint8')  # 將scale轉換成8-bit(簡報P55)
-    
     return gradient, angles  # 回傳梯度以及角度
             
 def non_maximum_suppression(img, angles):  # 非最大值響應，用以去除假的邊緣響應
     size = img.shape
-    suppressed = np.zeros(size, dtype = 'uint8')
+    suppressed = np.zeros(size)
     for i in range(1, size[0] - 1):
         for j in range(1, size[1] - 1):
             # 依梯度方向(法向量方向):水平、垂直、+-45度
             if (0 <= angles[i, j] < 22.5) or (157.5 <= angles[i, j] <= 180):
-                compare_value = max(img[i, j - 1], img[i, j + 1])
+                value_to_compare = max(img[i, j - 1], img[i, j + 1])
             elif (22.5 <= angles[i, j] < 67.5):
-                compare_value = max(img[i - 1, j - 1], img[i + 1, j + 1])
+                value_to_compare = max(img[i - 1, j - 1], img[i + 1, j + 1])
             elif (67.5 <= angles[i, j] < 112.5):
-                compare_value = max(img[i - 1, j], img[i + 1, j])
+                value_to_compare = max(img[i - 1, j], img[i + 1, j])
             else:
-                compare_value = max(img[i + 1, j - 1], img[i - 1, j + 1])
+                value_to_compare = max(img[i + 1, j - 1], img[i - 1, j + 1])
             # 對於某一點P，若他的梯度值沒有比梯度方向兩側點大則其梯度值設為0
             # 此處則為若該處為最大值，才將其填入新圖中
-            if img[i, j] >= compare_value:
+            if img[i, j] >= value_to_compare:
                 suppressed[i, j] = img[i, j]
     return suppressed
 
-# 雙門檻值，大於high為強像素，小於low為弱像素，介於兩者之間其周圍4連通或8連通若有強項素其為邊緣
-def double_threshold_hysteresis(img, low, high):  
-    double_threshold = np.zeros(img.shape, dtype = 'uint8')
+def double_threshold_hysteresis(img, low, high): # 雙門檻值 介於low, high之間其8連通若有強項素其為邊緣
     size = img.shape
+    low_x, low_y = np.where((img < low))
+    img[low_x, low_y] = 0
+    weak_x, weak_y = np.where((img >= low) & (img < high))
+    img[weak_x, weak_y] = 1
+    strong_x, strong_y = np.where(img >= high)
+    img[strong_x, strong_y] = 2
+
+    def recursion(img, c):  
+        i,j = c    
+        # dx、dy 分別是周圍8個點的位置
+        dx = [-1,-1,-1,0,0,1,1,1]
+        dy = [-1,0,1,-1,1,-1,0,1]
+
+        for x,y in zip(dx,dy):
+            if img[i + x,j + y] == 1:
+                # 如果有弱像素存在把那個點設成強像素、再移動到那個點、用遞廻不斷查看下一個點
+                img[i + x,j + y] = 2
+                recursion(img,(i + x,j + y))
+                
     for i in range(1, size[0] - 1):
         for j in range(1, size[1] - 1):
-            if(img[i, j] > high):
-                double_threshold[i, j] = 255
-            elif(img[i, j] <= high and img[i, j] >= low):
-                if(np.max(img[i - 1 : i + 2, j - 1 : j + 2]) >= high):
-                    double_threshold[i, j] = 255
-                else:
-                    double_threshold[i, j] = 0
-            else:
-                double_threshold[i, j] = 0
-    return double_threshold
+            if img[i,j] == 2:
+                recursion(img, (i, j))
+    img = np.where(img == 2,255,0)
+    return np.uint8(img)
 
 def Canny(img, low, high):
     img, angles = SobelFilter(img)
     # cv2.imshow('SobelFilter', img)
-    # cv2.imwrite('./Test_Img/' + file_name + '_SobelFilter.jpg',img)
+    # cv2.imwrite('./Test_Img/' + name + '_SobelFilter.jpg',img)
     gradient = np.copy(img)
     img = non_maximum_suppression(img, angles)
     # cv2.imshow('non_maximum_suppression', img)
-    # cv2.imwrite('./Test_Img/' + file_name + '_non_maximum_suppression.jpg',img)
+    # cv2.imwrite('./Test_Img/' + name + '_non_maximum_suppression.jpg',img)
     img = double_threshold_hysteresis(img, low, high)
-    # cv2.imshow('double_threshold_hysteresis', img)
-    # cv2.imwrite('./Test_Img/' + file_name + '_double_threshold_hysteresis.jpg',img)
     return img, gradient
 
 def HoughLinesP(canny):  # 定義Hough轉換參數
@@ -91,45 +94,34 @@ def HoughLinesP(canny):  # 定義Hough轉換參數
         cv2.line(HoughLinesP, (leftx, boty), (rightx,topy), (255, 255, 0), 2)
     return HoughLinesP
 
-# 目前只能用png疊png，不能png疊jpg  
-def combine_different_size_images(image1, image2, start_y, start_x):   
-    foreground, background = image1.copy(), image2.copy()  # 第一張圖是要覆蓋的，第二章式背景，image1複製給這個參數(foreground)，後面以此類推
-    # Check border
-    if foreground.shape[0]+start_y > background.shape[0] or foreground.shape[1]+start_x > background.shape[1]: 
-        raise ValueError("The foreground image exceeds the background boundaries at this location")
-
-    alpha =1
-    # do composite at specified location
-    end_y = start_y+foreground.shape[0]  # 結束位置就是開始加上要覆蓋的圖的長度( y )
-    end_x = start_x+foreground.shape[1]
-    # 合併兩張圖，圖片、權重、圖片、權重、加到每個總和的標量，相當於調亮度、OutputArray(有沒有他好像沒差)
-    combine = cv2.addWeighted(foreground, alpha, background[start_y:end_y, start_x:end_x,:], alpha, 0, background)
-    background[start_y:end_y, start_x:end_x,:] = combine       # 合併的圖片貼回背景圖
-    
+def combine_images(foreground, background, start_y, start_x):
+    foreground=cv2.addWeighted(background[start_y:start_y+foreground.shape[0], start_x:start_x+foreground.shape[1]],1,foreground,1,0)
+    background[start_y:start_y+foreground.shape[0], start_x:start_x+foreground.shape[1]] = foreground
     return background
 
-img, file_name, file_extension = read_img('E:/Program_File/PYTHON/數位影像處理作業/HW_3/Test_Img/03.jpg')
+img, name, extension = read_img('E:/Program_File/PYTHON/Digital_Image_Processing_HomeWork/HW_3/Test_Img/01.jpg')
 
-canny, gradient = Canny(img, 10, 30)
+canny, gradient = Canny(img, 50, 150)
 HoughLinesP = HoughLinesP(canny)
-
-
-# 讀檔  目前只能用png疊png，不能png疊jpg     
-# img_myself, file_name_myself, file_extension_myself = read_img('E:/Program_File/PYTHON/數位影像處理作業/HW_3/Test_Img/selfie.png')
-# img_signature, file_name_signature, file_extension_signature = read_img('E:/Program_File/PYTHON/數位影像處理作業/HW_3/Test_Img/SWIMIN.png')
-# signature = combine_different_size_images(img_signature, img_myself, 350, 50)  # 呼叫上面def的副函式，第一個參數是前景，第二個為背景，第三四個為開始位置 Y*X (Y:直的，X:橫的)
-
-
-
-
-
-
 cv2.imshow('Canny', canny)
-# cv2.imwrite('./Test_Img/' + file_name + '_canny.jpg',canny)
-# cv2.imshow('HoughLinesP', HoughLinesP)
-# cv2.imwrite('./Test_Img/' + file_name + '_HoughLinesP.jpg',HoughLinesP)
-# cv2.imshow('composited image', signature)
-# cv2.imwrite('./Test_Img/' + file_name_myself + '_signature.jpg',background)
+# cv2.imwrite('./Test_Img/' + name + '_canny.jpg',canny)
+cv2.imshow('HoughLinesP', HoughLinesP)
+# cv2.imwrite('./Test_Img/' + name + '_HoughLinesP.jpg',HoughLinesP)
+
+
+img_canny_signature, img_canny_signature_name, img_canny_signature_extension  = \
+    read_img('E:/Program_File/PYTHON/Digital_Image_Processing_HomeWork/HW_3/Test_Img/01_canny.jpg')  # 讀檔(中文路徑會爆掉)
+img_HoughLinesP_signature, img_HoughLinesP_signature_name, img_HoughLinesP_signature_extension  = \
+    read_img('E:/Program_File/PYTHON/Digital_Image_Processing_HomeWork/HW_3/Test_Img/01_HoughLinesP.jpg')  # 讀檔(中文路徑會爆掉)
+signature, name_signature, extension_signature = \
+    read_img('E:/Program_File/PYTHON/Digital_Image_Processing_HomeWork/HW_3/Test_Img/SWIMIN.png')
+
+canny_signature = combine_images(signature, img_canny_signature, 20, 20)  # 呼叫上面def的副函式，第一個參數是前景，第二個為背景，第三四個為開始位置 Y*X (Y:直的，X:橫的)
+HoughLinesP_signature = combine_images(signature, img_HoughLinesP_signature, 20, 20)  # 呼叫上面def的副函式，第一個參數是前景，第二個為背景，第三四個為開始位置 Y*X (Y:直的，X:橫的)
+cv2.imshow('canny_signature image', canny_signature)
+# cv2.imwrite('./Test_Img/' + img_canny_signature_name + '_canny_signature.jpg',canny_signature)
+cv2.imshow('HoughLinesP_signature image', HoughLinesP_signature)
+# cv2.imwrite('./Test_Img/' + img_HoughLinesP_signature_name + '_HoughLinesP_signature.jpg',HoughLinesP_signature)
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
